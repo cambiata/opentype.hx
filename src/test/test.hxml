@@ -1,20 +1,26 @@
 -lib buddy
 -cp ..
+
 --each
+
+# -m Main
+# --interp
+
+# --next 
 
 -lib hxnodejs
 -js test.js 
---main Main
+-m Main
 --cmd node test.js
 
---next 
 
--lib hxcs
---cs out/cs 
---main Main
 
---next 
---cs out/cs 
---main MainCs
---cmd cd out/cs/bin 
---cmd MainCs.exe 
+# -lib hxcs
+# --cs out/cs 
+# --main Main
+
+# --next 
+# --cs out/cs 
+# --main MainCs
+# --cmd cd out/cs/bin 
+# --cmd MainCs.exe 
