@@ -1,5 +1,6 @@
 .haxelib
 .out
 test.js
+examples.js
 positions.json
 results.json

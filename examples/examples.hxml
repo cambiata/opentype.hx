@@ -1,0 +1,11 @@
+-p ../src
+-m GettingStarted
+-D analyzer-optimize
+-dce full
+
+--each
+
+-L hxnodejs
+-js examples.js
+-cmd node examples.js
+
