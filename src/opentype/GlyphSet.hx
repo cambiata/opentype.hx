@@ -119,7 +119,7 @@ class GlyphSet {
 	 * @param  {Function} buildPath
 	 * @return {opentype.Glyph}
 	 */
-	public static function ttfGlyphLoader(font, index, /* parseGlyph, */ data, position /*, buildPath*/):Void->Glyph {
+	public static function ttfGlyphLoader(font, index, parseGlyph, data, position, buildPath):Void->Glyph {
 		return function() {
 			final glyph = new Glyph({index: index /*, font: font*/});
 			/*
@@ -130,6 +130,16 @@ class GlyphSet {
 					return path;
 				};
 			 */
+
+			glyph.get_path = function() {
+				trace('get_path');
+				parseGlyph(glyph, data, position);
+				final path = buildPath(font.glyphs, glyph);
+
+				return null;
+			}
+
+			// trace(glyph.xMin);
 			// defineDependentProperty(glyph, 'xMin', '_xMin');
 			// defineDependentProperty(glyph, 'xMax', '_xMax');
 			// defineDependentProperty(glyph, 'yMin', '_yMin');

@@ -3,15 +3,15 @@
 
 --each
 
-# -m Main
-# --interp
+-m Main
+--interp
 
 # --next 
 
--lib hxnodejs
--js test.js 
--m Main
---cmd node test.js
+# -lib hxnodejs
+# -js test.js 
+# -m Main
+# --cmd node test.js
 
 
 

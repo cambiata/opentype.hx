@@ -171,7 +171,6 @@ class OpenType {
 	    }
 	}
 
-
     public static function parse(data : Bytes) : Font {
         var indexToLocFormat : Int = -1;
         var ltagTable = [];
