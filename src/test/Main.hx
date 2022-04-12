@@ -16,6 +16,7 @@ class Main implements Buddy<[
 	// TestTypes,
 	// utils.TestGlyphMetrics,
 	// TestPath,
-	TestGlyph,
+	// TestGlyph,
 	// TestFont,
+	TestTokenizer,
 ]> {}

@@ -131,6 +131,114 @@ class Font {
 		}
 		return kernings;
 	}
+
+	/**
+	 * Create a Path object that represents the given text.
+	 * @param  {string} text - The text to create.
+	 * @param  {number} [x=0] - Horizontal position of the beginning of the text.
+	 * @param  {number} [y=0] - Vertical position of the *baseline* of the text.
+	 * @param  {number} [fontSize=72] - Font size in pixels. We scale the glyph units by `1 / unitsPerEm * fontSize`.
+	 * @param  {GlyphRenderOptions=} options
+	 * @return {opentype.Path}
+	 */
+	public function getPath(text:String, x:Float, y:Float, fontSize:Float, options:Dynamic = null) {
+		final fullPath = new Path();
+		this.forEachGlyph(text, x, y, fontSize, options, function(font, glyph, gX, gY, gFontSize, options) {
+			final glyphPath:Path = glyph.getPath(gX, gY, gFontSize, options, this);
+			trace(glyphPath);
+			fullPath.extendWithPath(glyphPath);
+		});
+		trace(fullPath);
+		return fullPath;
+	};
+
+	/**
+	 * Helper function that invokes the given callback for each glyph in the given text.
+	 * The callback gets `(glyph, x, y, fontSize, options)`.* @param  {string} text
+	 * @param {string} text - The text to apply.
+	 * @param  {number} [x=0] - Horizontal position of the beginning of the text.
+	 * @param  {number} [y=0] - Vertical position of the *baseline* of the text.
+	 * @param  {number} [fontSize=72] - Font size in pixels. We scale the glyph units by `1 / unitsPerEm * fontSize`.
+	 * @param  {GlyphRenderOptions=} options
+	 * @param  {Function} callback
+	 */
+	function forEachGlyph(text:String, x:Float, y:Float, fontSize:Float, options:Dynamic, callback:Font->Glyph->Float->Float->Float->Dynamic->Void) {
+		trace('text ' + text);
+		x = x != null ? x : 0;
+		y = y != null ? y : 0;
+		fontSize = fontSize != null ? fontSize : 72;
+
+		// options = Object.assign({}, this.defaultRenderOptions, options);
+
+		final fontScale = 1 / this.unitsPerEm * fontSize;
+		final glyphs = this.stringToGlyphs(text, options);
+
+		// var kerningLookups;
+		// if (options.kerning) {
+		// 	final script = options.script || this.position.getDefaultScriptName();
+		// 	kerningLookups = this.position.getKerningTables(script, options.language);
+		// }
+
+		for (i in 0...glyphs.length) {
+			final glyph = glyphs[i];
+
+			callback(this, glyph, x, y, fontSize, options);
+
+			if (glyph.advanceWidth != null) {
+				x += glyph.advanceWidth * fontScale;
+			}
+
+			// if (options.kerning && i < glyphs.length - 1) {
+			// 	// We should apply position adjustment lookups in a more generic way.
+			// 	// Here we only use the xAdvance value.
+			// 	final kerningValue = kerningLookups ? this.position.getKerningValue(kerningLookups, glyph.index,
+			// 		glyphs[i + 1].index) : this.getKerningValue(glyph, glyphs[i + 1]);
+			// 	x += kerningValue * fontScale;
+			// }
+
+			// if (options.letterSpacing) {
+			// 	x += options.letterSpacing * fontSize;
+			// } else if (options.tracking) {
+			// 	x += (options.tracking / 1000) * fontSize;
+			// }
+		}
+		return x;
+	};
+
+	/**
+	 * Convert the given text to a list of Glyph objects.
+	 * Note that there is no strict one-to-one mapping between characters and
+	 * glyphs, so the list of returned glyphs can be larger or smaller than the
+	 * length of the given string.
+	 * @param  {string}
+	 * @param  {GlyphRenderOptions} [options]
+	 * @return {opentype.Glyph[]}
+	 */
+	function stringToGlyphs(s:String, options:Dynamic):Array<Glyph> {
+		final bidi = new Bidi();
+		// // Create and register 'glyphIndex' state modifier
+		final charToGlyphIndexMod = token -> this.charToGlyphIndex(token.char);
+		bidi.registerModifier('glyphIndex', null, charToGlyphIndexMod);
+
+		// bidi.registerModifier('glyphIndex', null, charToGlyphIndexMod);
+		// // roll-back to default features
+		// var features = options ? this.updateFeatures(options.features) : this.defaultRenderOptions.features;
+		// bidi.applyFeatures(this, features);
+		// final indexes = bidi.getTextGlyphs(s);
+		// var length = indexes.length;
+
+		trace(s);
+		final indexes:Array<Int> = s.split('').map(s -> s.charCodeAt(0));
+		trace(indexes);
+
+		// convert glyph indexes to glyph objects
+		final glyphs = [];
+		for (i in 0...indexes.length) {
+			final glyph = this.glyphs.get(indexes[i]);
+			glyphs[i] = glyph != null ? glyph : this.glyphs.get(0);
+		}
+		return glyphs;
+	};
 }
 
 class HorizontalMetrics {

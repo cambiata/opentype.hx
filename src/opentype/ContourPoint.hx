@@ -1,3 +1,3 @@
 package opentype;
 
-typedef ContourPoint = {x:Int, y:Int, ?onCurve:Bool, ?lastPointOfContour:Bool};
+typedef ContourPoint = {x:Float, y:Float, ?onCurve:Bool, ?lastPointOfContour:Bool};

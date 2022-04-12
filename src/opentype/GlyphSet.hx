@@ -2,6 +2,8 @@ package opentype;
 
 import opentype.Glyph;
 
+using Lambda;
+
 @:structInit
 class GlyphWrapper {
 	public function new(glyph, loader) {
@@ -119,31 +121,35 @@ class GlyphSet {
 	 * @param  {Function} buildPath
 	 * @return {opentype.Glyph}
 	 */
+	@:access(opentype.Glyph)
+	@:access(opentype.Path)
 	public static function ttfGlyphLoader(font, index, parseGlyph, data, position, buildPath):Void->Glyph {
 		return function() {
 			final glyph = new Glyph({index: index /*, font: font*/});
-			/*
-				glyph.path = function() {
-					parseGlyph(glyph, data, position);
-					final path = buildPath(font.glyphs, glyph);
-					path.unitsPerEm = font.unitsPerEm;
-					return path;
-				};
-			 */
 
 			glyph.get_path = function() {
-				trace('get_path');
 				parseGlyph(glyph, data, position);
-				final path = buildPath(font.glyphs, glyph);
-
-				return null;
+				final path:Path = buildPath(font.glyphs, glyph);
+				// path.commands.iter(i -> trace(i));
+				path.unitsPerEm = font.unitsPerEm;
+				return path;
 			}
-
-			// trace(glyph.xMin);
-			// defineDependentProperty(glyph, 'xMin', '_xMin');
-			// defineDependentProperty(glyph, 'xMax', '_xMax');
-			// defineDependentProperty(glyph, 'yMin', '_yMin');
-			// defineDependentProperty(glyph, 'yMax', '_yMax');
+			glyph.get_xMin = function() {
+				glyph.get_path();
+				return glyph._xMin;
+			}
+			glyph.get_xMax = function() {
+				glyph.get_path();
+				return glyph._xMax;
+			}
+			glyph.get_yMin = function() {
+				glyph.get_path();
+				return glyph._yMin;
+			}
+			glyph.get_yMax = function() {
+				glyph.get_path();
+				return glyph._yMax;
+			}
 
 			return glyph;
 		};

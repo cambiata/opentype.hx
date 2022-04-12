@@ -36,16 +36,11 @@ class GlyphTable {
 
 	//------------------------------------------------------------------------------------------------------------
 	// Parse a TrueType glyph.
-	static function parseGlyph(glyph:Glyph, data:Bytes, start:Int) {
-		trace('parseGlyph ========================');
-		// trace(glyph);
-		// trace(data.length);
-		// trace(start);
 
-		// final p = new parse.Parser(data, start);
+	@:access(opentype.Glyph)
+	static function parseGlyph(glyph:Glyph, data:Bytes, start:Int) {
 		final p = new Parser(data, start);
-		glyph.numberOfCountours = p.parseShort();
-		// trace('number ' + glyph.numberOfCountours);
+		glyph.numberOfContours = p.parseShort();
 
 		glyph._xMin = p.parseShort();
 		glyph._yMin = p.parseShort();
@@ -55,10 +50,10 @@ class GlyphTable {
 		final flags = [];
 		var flag:Int = 0;
 
-		if (glyph.numberOfCountours > 0) {
+		if (glyph.numberOfContours > 0) {
 			final endPointIndices = glyph.endPointIndices = [];
 			// trace('endPointInd ' + endPointIndices);
-			for (i in 0...glyph.numberOfCountours) {
+			for (i in 0...glyph.numberOfContours) {
 				final ei = p.parseUShort();
 				// trace('ei: ' + ei);
 				endPointIndices.push(ei);
@@ -114,14 +109,14 @@ class GlyphTable {
 						points.push(point);
 					}
 
-					var px = 0;
+					var px = .0;
 					for (i in 0...numberOfCoordinates) {
 						flag = flags[i];
 						points[i].x = parseGlyphCoordinate(p, flag, px, 2, 16);
 						px = points[i].x;
 					}
 
-					var py = 0;
+					var py = .0;
 					for (i in 0...numberOfCoordinates) {
 						flag = flags[i];
 						points[i].y = parseGlyphCoordinate(p, flag, py, 4, 32);
@@ -133,14 +128,14 @@ class GlyphTable {
 				glyph.points = [];
 			}
 
-			glyph.points.iter(i -> trace(i));
+			// glyph.points.iter(i -> trace(i));
 			//
-		} else if (glyph.numberOfCountours == 0) {
+		} else if (glyph.numberOfContours == 0) {
 			glyph.points = [];
 			//
 		} else {
 			//
-			trace('IS COMPOSITE');
+			// trace('IS COMPOSITE');
 			glyph.isComposite = true;
 			glyph.points = [];
 			glyph.components = [];
@@ -148,7 +143,7 @@ class GlyphTable {
 			var flags = null;
 			while (moreComponents) {
 				flags = p.parseUShort();
-				trace(['moreComponents', flags]);
+				// trace(['moreComponents', flags]);
 
 				var component:opentype.Component = {
 					glyphIndex: p.parseUShort(),
@@ -218,10 +213,11 @@ class GlyphTable {
 		}
 	}
 
-	static function buildPath(glyphs, glyph) {
-		trace('buildPath --------------------------------');
-		trace(glyphs.length);
-		trace(glyph);
+	@:access(opentype.Glyph)
+	static function buildPath(glyphs:GlyphSet, glyph:Glyph) {
+		// trace('buildPath --------------------------------');
+		// trace(glyphs.length);
+		// trace(glyph);
 
 		if (glyph.isComposite) {
 			trace('IS Composite');
@@ -231,30 +227,34 @@ class GlyphTable {
 				// Force the ttfGlyphLoader to parse the glyph.
 				componentGlyph.get_path();
 				if (componentGlyph.points.length > 0) {
-					var transformedPoints;
+					var transformedPoints:Array<ContourPoint> = null;
 
-					// if (component.matchedPoints === undefined) {
-					// 	// component positioned by offset
-					// 	transformedPoints = transformPoints(componentGlyph.points, component);
-					// } else {
-					// 	// component positioned by matched points
-					// 	if ((component.matchedPoints[0] > glyph.points.length - 1) ||
-					// 		(component.matchedPoints[1] > componentGlyph.points.length - 1)) {
-					// 		throw Error('Matched points out of range in ' + glyph.name);
-					// 	}
-					// 	const firstPt = glyph.points[component.matchedPoints[0]];
-					// 	let secondPt = componentGlyph.points[component.matchedPoints[1]];
-					// 	const transform = {
-					// 		xScale: component.xScale, scale01: component.scale01,
-					// 		scale10: component.scale10, yScale: component.yScale,
-					// 		dx: 0, dy: 0
-					// 	};
-					// 	secondPt = transformPoints([secondPt], transform)[0];
-					// 	transform.dx = firstPt.x - secondPt.x;
-					// 	transform.dy = firstPt.y - secondPt.y;
-					// 	transformedPoints = transformPoints(componentGlyph.points, transform);
-					// }
-					// glyph.points = glyph.points.concat(transformedPoints);
+					if (component.matchedPoints == null) {
+						// component positioned by offset
+						transformedPoints = transformPoints(componentGlyph.points, component);
+					} else {
+						// component positioned by matched points
+						if ((component.matchedPoints[0] > glyph.points.length - 1)
+							|| (component.matchedPoints[1] > componentGlyph.points.length - 1)) {
+							throw('Matched points out of range in ' + glyph.name);
+						}
+						final firstPt = glyph.points[component.matchedPoints[0]];
+						var secondPt:ContourPoint = componentGlyph.points[component.matchedPoints[1]];
+						final transform:PointsTransform = {
+							xScale: component.xScale,
+							scale01: component.scale01,
+							scale10: component.scale10,
+							yScale: component.yScale,
+							dx: .0,
+							dy: .0
+						};
+						secondPt = transformPoints([secondPt], transform)[0];
+						transform.dx = firstPt.x - secondPt.x;
+						transform.dy = firstPt.y - secondPt.y;
+						transformedPoints = transformPoints(componentGlyph.points, transform);
+					}
+
+					glyph.points = glyph.points.concat(cast transformedPoints);
 				}
 			}
 		}
@@ -262,70 +262,85 @@ class GlyphTable {
 		return getPath(glyph.points);
 	}
 
+	static function getContours(points:Array<ContourPoint>) {
+		final contours = [];
+		var currentContour = [];
+
+		for (i in 0...points.length) {
+			final pt = points[i];
+			currentContour.push(pt);
+			if (pt.lastPointOfContour) {
+				contours.push(currentContour);
+				currentContour = [];
+			}
+		}
+		if (currentContour.length > 0)
+			throw 'There are still points left in the current contour.';
+
+		return contours;
+	}
+
 	// Convert the TrueType glyph outline to a Path.
-	static function getPath(points) {
-		/*
-			const p = new Path();
-			if (!points) {
-				return p;
+	static function getPath(points:Array<ContourPoint>) {
+		final p = new Path();
+		if (points == null || points.length == 0) {
+			return p;
+		}
+
+		final contours = getContours(points);
+		// trace('contours: ' + contours);
+
+		for (contourIndex in 0...contours.length) {
+			final contour = contours[contourIndex];
+
+			var prev = null;
+			var curr = contour[contour.length - 1];
+			var next = contour[0];
+
+			if (curr.onCurve) {
+				p.moveTo(curr.x, curr.y);
+			} else {
+				if (next.onCurve) {
+					p.moveTo(next.x, next.y);
+				} else {
+					// If both first and last points are off-curve, start at their middle.
+					final start = {x: (curr.x + next.x) * 0.5, y: (curr.y + next.y) * 0.5};
+					p.moveTo(start.x, start.y);
+				}
 			}
 
-			const contours = getContours(points);
-
-			for (let contourIndex = 0; contourIndex < contours.length; ++contourIndex) {
-				const contour = contours[contourIndex];
-
-				let prev = null;
-				let curr = contour[contour.length - 1];
-				let next = contour[0];
+			for (i in 0...contour.length) {
+				prev = curr;
+				curr = next;
+				next = contour[(i + 1) % contour.length];
 
 				if (curr.onCurve) {
-					p.moveTo(curr.x, curr.y);
+					// This is a straight line.
+					p.lineTo(curr.x, curr.y);
 				} else {
-					if (next.onCurve) {
-						p.moveTo(next.x, next.y);
-					} else {
-						// If both first and last points are off-curve, start at their middle.
-						const start = { x: (curr.x + next.x) * 0.5, y: (curr.y + next.y) * 0.5 };
-						p.moveTo(start.x, start.y);
+					var prev2 = prev;
+					var next2 = next;
+
+					if (!prev.onCurve) {
+						prev2 = {x: (curr.x + prev.x) * 0.5, y: (curr.y + prev.y) * 0.5};
 					}
-				}
 
-				for (let i = 0; i < contour.length; ++i) {
-					prev = curr;
-					curr = next;
-					next = contour[(i + 1) % contour.length];
-
-					if (curr.onCurve) {
-						// This is a straight line.
-						p.lineTo(curr.x, curr.y);
-					} else {
-						let prev2 = prev;
-						let next2 = next;
-
-						if (!prev.onCurve) {
-							prev2 = { x: (curr.x + prev.x) * 0.5, y: (curr.y + prev.y) * 0.5 };
-						}
-
-						if (!next.onCurve) {
-							next2 = { x: (curr.x + next.x) * 0.5, y: (curr.y + next.y) * 0.5 };
-						}
-
-						p.quadraticCurveTo(curr.x, curr.y, next2.x, next2.y);
+					if (!next.onCurve) {
+						next2 = {x: (curr.x + next.x) * 0.5, y: (curr.y + next.y) * 0.5};
 					}
-				}
 
-				p.closePath();
+					p.quadraticCurveTo(curr.x, curr.y, next2.x, next2.y);
+				}
 			}
-			return p;
-		 */
 
-		return null;
+			p.closePath();
+		}
+		return p;
 	}
 
 	// Parse the coordinate data for a glyph.
-	static function parseGlyphCoordinate(p, flag, previousValue, shortVectorBitMask, sameBitMask) {
-		var v;
+	static function parseGlyphCoordinate(p, flag, previousValue:Float, shortVectorBitMask, sameBitMask) {
+		var v:Float;
 		if ((flag & shortVectorBitMask) > 0) {
 			// The coordinate is 1 byte long.
 			v = p.parseByte();
@@ -348,4 +363,30 @@ class GlyphTable {
 
 		return v;
 	}
+
+	// Transform an array of points and return a new array.
+	static function transformPoints(points:Array<ContourPoint>, transform:PointsTransform):Array<ContourPoint> {
+		final newPoints = [];
+		for (i in 0...points.length) {
+			final pt = points[i];
+			final newPt:ContourPoint = {
+				x: transform.xScale * pt.x + transform.scale01 * pt.y + transform.dx,
+				y: transform.scale10 * pt.x + transform.yScale * pt.y + transform.dy,
+				onCurve: pt.onCurve,
+				lastPointOfContour: pt.lastPointOfContour
+			};
+			newPoints.push(newPt);
+		}
+
+		return newPoints;
+	}
+}
+
+typedef PointsTransform = {
+	xScale:Float,
+	scale01:Float,
+	scale10:Float,
+	yScale:Float,
+	dx:Float,
+	dy:Float,
 }
