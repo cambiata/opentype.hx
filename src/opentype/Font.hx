@@ -3,6 +3,8 @@ package opentype;
 import opentype.tables.Tables;
 import opentype.Encoding.IEncoding;
 import opentype.Encoding.DefaultEncoding;
+import opentype.Tokenizer.Token;
+import opentype.Tokenizer.ContextParams;
 
 class Font {
 	public function new(?options:FontOptions) {
@@ -85,8 +87,8 @@ class Font {
 	 * @param  {string}
 	 * @return {Number}
 	 */
-	public function charToGlyphIndex(s) {
-		return encoding.charToGlyphIndex(s);
+	public function charToGlyphIndex(s:String) {
+		return encoding.charToGlyphIndex(s.charCodeAt(0));
 	}
 
 	/**
@@ -97,9 +99,9 @@ class Font {
 	 * @return {opentype.Glyph}
 	 */
 	public function charToGlyph(c:String):Glyph {
-		final charCode = c.charCodeAt(0);
+		// final charCode = c.charCodeAt(0);
 
-		final glyphIndex = charToGlyphIndex(charCode);
+		final glyphIndex = charToGlyphIndex(c);
 		return getGlyphByIndex(glyphIndex);
 	}
 
@@ -217,7 +219,7 @@ class Font {
 	function stringToGlyphs(s:String, options:Dynamic):Array<Glyph> {
 		final bidi = new Bidi();
 		// // Create and register 'glyphIndex' state modifier
-		final charToGlyphIndexMod = token -> this.charToGlyphIndex(token.char);
+		final charToGlyphIndexMod = (token:Token, contextParams:ContextParams) -> this.charToGlyphIndex(token.char);
 		bidi.registerModifier('glyphIndex', null, charToGlyphIndexMod);
 
 		// bidi.registerModifier('glyphIndex', null, charToGlyphIndexMod);

@@ -18,5 +18,6 @@ class Main implements Buddy<[
 	// TestPath,
 	// TestGlyph,
 	// TestFont,
-	TestTokenizer,
+	// TestTokenizer,
+	TestBidi,
 ]> {}
