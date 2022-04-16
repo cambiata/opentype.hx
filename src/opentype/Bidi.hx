@@ -1,5 +1,6 @@
 package opentype;
 
+import haxe.DynamicAccess;
 import opentype.Tokenizer;
 
 class Bidi {
@@ -27,10 +28,7 @@ class Bidi {
 		if (this.query == null)
 			this.query = new FeatureQuery(font);
 
-		for (feature in features) {
-			if (!this.query.supports({script: feature.script}))
-				continue;
-		}
+ 
 	}
 }
 
@@ -47,6 +45,7 @@ class FeatureQuery {
 		if (query.script == null)
 			return false;
 		this.getScriptFeatures(query.script);
+		return null;
 	}
 
 	public function getScriptFeatures(scriptTag:String) {

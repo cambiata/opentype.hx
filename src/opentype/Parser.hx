@@ -150,12 +150,17 @@ class Parser {
 		return p.parseUShortList();
 	}
 
+	public function parseOffset16List()
+		return this.parseUShortList();
+
 	public function parseUShortList():Array<Int> {
-		return parseUShortListOfLength(parseUShort());
+		final result = parseUShortListOfLength(parseUShort());
+		return result;
 	}
 
 	public function parseUShortListOfLength(count:Int):Array<Int> {
-		return [for (i in 0...count) parseUShort()];
+		final list = [for (i in 0...count) parseUShort()];
+		return list;
 	}
 
 	/**
@@ -176,7 +181,8 @@ class Parser {
 	};
 
 	public function parseListOfLength<T>(count:Int, parseFn:Void->T):Array<T> {
-		return [for (i in 0...count) parseFn()];
+		final list = [for (i in 0...count) parseFn()];
+		return list;
 	};
 
 	/**
@@ -298,7 +304,7 @@ class Parser {
 	 * If provided, itemCallback is called on each item and must parse the item.
 	 * See examples in tables/gsub.js
 	 */
-	public function parseListOfLists<T>(itemCallback:Void->T):Array<Array<T>> {
+	public function parseListOfLists<T>(itemCallback:Void->T = null):Array<Array<T>> {
 		final offsets = parseUShortList();
 		final count = offsets.length;
 		final relativeOffset = this.relativeOffset;
@@ -313,16 +319,24 @@ class Parser {
 				continue;
 			}
 			this.relativeOffset = start;
-			final subOffsets = parseUShortList();
-			final subList = new Array();
-			subList.resize(subOffsets.length);
-			final subList = [
-				for (j in 0...subOffsets.length) {
-					this.relativeOffset = start + subOffsets[j];
-					subList[j] = itemCallback();
-				}
-			];
-			list[i] = subList;
+
+			if (itemCallback != null) {
+				final subOffsets = parseUShortList();
+				final subList = new Array();
+				subList.resize(subOffsets.length);
+				final subList = [
+					for (j in 0...subOffsets.length) {
+						this.relativeOffset = start + subOffsets[j];
+						subList[j] = itemCallback();
+					}
+				];
+
+				list[i] = subList;
+			} else {
+				// final shortList:Array<T> = cast parseUShortList();
+				// trace(shortList);
+				list[i] = cast parseUShortList();
+			}
 		}
 		this.relativeOffset = relativeOffset;
 		return list;
@@ -433,7 +447,7 @@ class Parser {
 	}
 
 	public function parseAtPointer<T>(parseFn:Parser->T):T {
-		var p = parsePointer();
+		var p:Parser = parsePointer();
 		return (p != null) ? parseFn(p) : null;
 	};
 
@@ -441,17 +455,45 @@ class Parser {
 		var p = parsePointer();
 		if (p == null)
 			return [];
-
 		return p.parseList(() -> {
 			p.parseAtPointer((p) -> {
 				final lookupType = p.parseUShort();
 				Check.assert(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ' + lookupType + ' unknown.');
 				final lookupFlag = p.parseUShort();
 				final useMarkFilteringSet = lookupFlag & 0x10;
-				return new LookupTable(lookupType, lookupFlag, p.parseList(() -> p.parseAtPointer(lookupTableParsers[lookupType])),
-					useMarkFilteringSet > 0 ? p.parseUShort() : useMarkFilteringSet);
+				final subTables:Array<Any> = p.parseList(() -> p.parseAtPointer(lookupTableParsers[lookupType]));
+				final markFilteringSet:Int = useMarkFilteringSet > 0 ? p.parseUShort() : useMarkFilteringSet;
+				final lookupTable = new LookupTable(lookupType, lookupFlag, subTables, useMarkFilteringSet);
+				return lookupTable;
 			});
 		});
+	};
+
+	public function parseFeatureVariationsList() {
+		throw 'unimplemented: Parser.parseFeatureVariationsList()';
+		return null;
+		// final featureVariations = JsonTypePathWithParams.parsePointer32(() -> {
+		// 	final majorVersion = this.parseUShort();
+		// 	final minorVersion = this.parseUShort();
+		// 	if (majorVersion == 1 && minorVersion < 1)
+		// 		throw 'GPOS/GSUB feature variations table unknown.';
+		// 	final featureVariations = this.parseRecordList32({
+		// 		conditionSetOffset: Parser.offset32,
+		// 		featureTableSubstitutionOffset: Parser.offset32
+		// 	});
+		// 	return featureVariations;
+		// });
+
+		// return this.parsePointer32(function() {
+		// 	const majorVersion = this.parseUShort();
+		// 	const minorVersion = this.parseUShort();
+		// 	check.argument(majorVersion === 1 && minorVersion < 1, 'GPOS/GSUB feature variations table unknown.');
+		// 	const featureVariations = this.parseRecordList32({
+		// 		conditionSetOffset: Parser.offset32,
+		// 		featureTableSubstitutionOffset: Parser.offset32
+		// 	});
+		// 	return featureVariations;
+		// }) || [];
 	};
 
 	// Retrieve a 4-character tag from the Bytes data.

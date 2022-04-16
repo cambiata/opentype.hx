@@ -19,5 +19,6 @@ class Main implements Buddy<[
 	// TestGlyph,
 	// TestFont,
 	// TestTokenizer,
-	TestBidi,
+	// TestBidi,
+	tables.GsubTable,
 ]> {}

@@ -10,4 +10,6 @@ class ValueRecord {
     public var yPlaDevice : Int;
     public var xAdvDevice : Int;
     public var yAdvDevice : Int;    
+
+    function toString():String return 'ValueRecord{$xPlacement, $yPlacement, $xAdvance, $yAdvance, $xPlaDevice, $yPlaDevice, $xAdvDevice, $yAdvDevice}';
 }

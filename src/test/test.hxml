@@ -1,16 +1,15 @@
 -lib buddy
 -cp ..
+ -m Main
 
 --each
 
-# -m Main
 # --interp
 
 # --next 
 
 -lib hxnodejs
 -js test.js 
--m Main
 --cmd node test.js
 
 
