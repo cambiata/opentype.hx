@@ -2,6 +2,9 @@ package opentype.tables;
 
 import opentype.tables.subtables.Lookup;
 import opentype.tables.subtables.Lookup.PairSet;
+import opentype.tables.subtables.LookupSets;
+import opentype.tables.subtables.LookupSets;
+import opentype.tables.subtables.ClassDefinition;
 import haxe.io.Bytes;
 
 class Gsub implements IScriptTable implements ILayoutTable {
@@ -10,7 +13,8 @@ class Gsub implements IScriptTable implements ILayoutTable {
 	}
 
 	static var subtableParsers:Array<Parser->Any> = [
-		null, cast parseLookup1, cast parseLookup2, error, error, error, error, error, error, error
+		null, cast parseLookup1, cast parseLookup2, cast parseLookup3, cast parseLookup4, cast parseLookup5, cast parseLookup6, cast parseLookup7,
+		cast parseLookup8, error
 	];
 
 	public function new() {
@@ -45,19 +49,6 @@ class Gsub implements IScriptTable implements ILayoutTable {
 			res.substitute = p.parseOffset16List();
 		}
 		return res;
-		// check.assert(false, '0x' + start.toString(16) + ': lookup type 1 format must be 1 or 2.');
-
-		// final start = p.offset + p.relativeOffset;
-		// final res = new Lookup();
-		// res.posFormat = p.parseUShort();
-		// Check.assert(res.posFormat == 1 || res.posFormat == 2, '${StringTools.hex(start)} : GPOS lookup type 1 format must be 1 or 2.');
-		// res.coverage = p.parsePointer().parseCoverage();
-		// if (res.posFormat == 1) {
-		// 	res.value = p.parseValueRecord();
-		// } else if (res.posFormat == 2) {
-		// 	res.values = p.parseValueRecordList();
-		// }
-		// return res;
 	};
 
 	// https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable
@@ -73,54 +64,163 @@ class Gsub implements IScriptTable implements ILayoutTable {
 		return res;
 	};
 
-	// final start = p.offset + p.relativeOffset;
-	// final res = new Lookup();
-	// res.posFormat = p.parseUShort();
-	// Check.assert(res.posFormat == 1 || res.posFormat == 2, '${StringTools.hex(start)} + : GPOS lookup type 2 format must be 1 or 2.');
-	// res.coverage = p.parsePointer().parseCoverage();
-	// res.valueFormat1 = p.parseUShort();
-	// res.valueFormat2 = p.parseUShort();
-	// if (res.posFormat == 1) {
-	// 	trace('posFormat 1');
-	// 	trace(res.valueFormat1);
-	// 	trace(res.valueFormat2);
-	// 	// Adjustments for Glyph Pairs
-	// 	final pairSets:Array<Array<PairSet>> = p.parseList(() -> {
-	// 		trace(111);
-	// 		//
-	// 		p.parseAtPointer(p -> {
-	// 			trace(222);
-	// 			//
-	// 			p.parseList(() -> {
-	// 				trace(333);
-	// 				//
-	// 				final pairSet = new PairSet(p.parseUShort(), p.parseValueRecordOfFormat(res.valueFormat1),
-	// 					p.parseValueRecordOfFormat(res.valueFormat2));
-	// 				trace(pairSet);
-	// 				return pairSet;
-	// 			});
-	// 		});
-	// 	});
-	// 	trace(pairSets);
-	// 	res.pairSets = pairSets;
-	// } else if (res.posFormat == 2) {
-	// 	trace('posFormat 2');
-	// 	res.classDef1 = p.parseAtPointer(Parser.classDef);
-	// 	res.classDef2 = p.parseAtPointer(Parser.classDef);
-	// 	res.classCount1 = p.parseUShort();
-	// 	res.classCount2 = p.parseUShort();
-	// 	res.classRecords = p.parseListOfLength(res.classCount1, () -> {
-	// 		p.parseListOfLength(res.classCount2, () -> {
-	// 			var r:Pair<ValueRecord, ValueRecord> = {
-	// 				value1: p.parseValueRecordOfFormat(res.valueFormat1),
-	// 				value2: p.parseValueRecordOfFormat(res.valueFormat2)
-	// 			};
-	// 			return r;
-	// 		});
-	// 	});
-	// }
-	// Check.assert(false, '${StringTools.hex(start)} : GPOS lookup type 1 format must be 1 or 2.');
-	// return res;
+	public static function parseLookup3(p:Parser):Lookup {
+		final substFormat = p.parseUShort();
+		if (substFormat != 1)
+			throw 'GSUB Multiple Substitution Subtable identifier-format must be 1';
+
+		final res:Lookup = new Lookup();
+		res.substFormat = substFormat;
+		res.coverage = p.parsePointer().parseCoverage();
+		res.alternateSets = p.parseListOfLists();
+		return res;
+	}
+
+	public static function parseLookup4(p:Parser):Lookup {
+		final substFormat = p.parseUShort();
+		if (substFormat != 1)
+			throw 'GSUB Multiple Substitution Subtable identifier-format must be 1';
+
+		final res:Lookup = new Lookup();
+		res.substFormat = substFormat;
+		res.coverage = p.parsePointer().parseCoverage();
+		res.ligatureSets = p.parseListOfLists(() -> {
+			return {
+				ligaGlyph: p.parseUShort(),
+				components: p.parseUShortList(p.parseUShort() - 1)
+			};
+		});
+
+		return res;
+	}
+
+	public static function parseLookup5(p:Parser):Lookup {
+		final start = p.offset + p.relativeOffset;
+		final substFormat = p.parseUShort();
+
+		final res:Lookup = new Lookup();
+		res.substFormat = substFormat;
+
+		switch substFormat {
+			case 1:
+				res.coverage = p.parsePointer().parseCoverage();
+				final ruleSets:Array<Array<RuleSet>> = p.parseListOfLists(() -> {
+					final glyphCount = p.parseUShort();
+					final substCount = p.parseUShort();
+					final lookupRecordDesc:LookupRecordDesc = {sequenceIndex: p.parseUShort, lookupListIndex: p.parseUShort}
+
+					final input = p.parseUShortList(glyphCount - 1);
+					final lookupRecords = p.parseRecordList2(substCount, lookupRecordDesc);
+					final ruleSet:RuleSet = {
+						input: input,
+						lookupRecords: lookupRecords
+					};
+
+					return ruleSet;
+				});
+				res.ruleSets = ruleSets;
+			case 2:
+				res.coverage = p.parsePointer().parseCoverage();
+				final classDef:ClassDefinition = p.parsePointer().parseClassDef();
+
+				final classSets:Array<Array<ClassSet>> = p.parseListOfLists(() -> {
+					final glyphCount = p.parseUShort();
+					final substCount = p.parseUShort();
+					final lookupRecordDesc:LookupRecordDesc = {sequenceIndex: p.parseUShort, lookupListIndex: p.parseUShort}
+					final classSet:ClassSet = {
+						classes: p.parseUShortList(glyphCount - 1),
+						lookupRecords: p.parseRecordList2(substCount, lookupRecordDesc)
+					};
+					return classSet;
+				});
+				res.classDef1 = classDef;
+				res.classSets = classSets;
+
+			case 3:
+				final glyphCount = p.parseUShort();
+				final substCount = p.parseUShort();
+				final lookupRecordDesc:LookupRecordDesc = {sequenceIndex: p.parseUShort, lookupListIndex: p.parseUShort}
+				final coverages = [];
+				for (i in 0...glyphCount)
+					coverages.push(p.parsePointer().parseCoverage());
+				res.coverages = coverages;
+				res.lookupRecords = p.parseRecordList2(substCount, lookupRecordDesc);
+
+			default:
+				throw 'lookup type 5 format must be 1, 2 or 3.';
+		}
+		return res;
+	}
+
+	public static function parseLookup6(p:Parser):Lookup {
+		throw 'Gsub parseLookup6 not implemented';
+		return null;
+	}
+
+	public static function parseLookup7(p:Parser):Lookup {
+		throw 'Gsub parseLookup7 not implemented';
+		return null;
+	}
+
+	public static function parseLookup8(p:Parser):Lookup {
+		final substFormat = p.parseUShort();
+		if (substFormat != 1)
+			throw 'GSUB Reverse Chaining Contextual Single Substitution Subtable identifier-format must be 1';
+
+		final res:Lookup = new Lookup();
+		res.substFormat = substFormat;
+		res.coverage = p.parsePointer().parseCoverage();
+		res.backtrackCoverage = p.parseList(cast p.parsePointer().parseCoverage());
+		res.lookaheadCoverage = p.parseList(cast p.parsePointer().parseCoverage());
+		res.substitutes = p.parseUShortList();
+
+		return res;
+	};
+
+	/*
+		subtableParsers[5] = function parseLookup5() {
+			const start = this.offset + this.relativeOffset;
+			const substFormat = this.parseUShort();
+
+			if (substFormat === 1) {
+				return {
+					substFormat: substFormat,
+					coverage: this.parsePointer(Parser.coverage),
+					ruleSets: this.parseListOfLists(function() {
+						const glyphCount = this.parseUShort();
+						const substCount = this.parseUShort();
+						return {
+							input: this.parseUShortList(glyphCount - 1),
+							lookupRecords: this.parseRecordList(substCount, lookupRecordDesc)
+						};
+					})
+				};
+			} else if (substFormat === 2) {
+				return {
+					substFormat: substFormat,
+					coverage: this.parsePointer(Parser.coverage),
+					classDef: this.parsePointer(Parser.classDef),
+					classSets: this.parseListOfLists(function() {
+						const glyphCount = this.parseUShort();
+						const substCount = this.parseUShort();
+						return {
+							classes: this.parseUShortList(glyphCount - 1),
+							lookupRecords: this.parseRecordList(substCount, lookupRecordDesc)
+						};
+					})
+				};
+			} else if (substFormat === 3) {
+				const glyphCount = this.parseUShort();
+				const substCount = this.parseUShort();
+				return {
+					substFormat: substFormat,
+					coverages: this.parseList(glyphCount, Parser.pointer(Parser.coverage)),
+					lookupRecords: this.parseRecordList(substCount, lookupRecordDesc)
+				};
+			}
+			check.assert(false, '0x' + start.toString(16) + ': lookup type 5 format must be 1, 2 or 3.');
+		};
+	 */
 	// https://docs.microsoft.com/en-us/typography/opentype/spec/gpos
 	static function parseGsubTable(data:Bytes, start = 0):Gsub {
 		final p = new Parser(data, start);

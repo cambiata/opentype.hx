@@ -12,6 +12,7 @@ import opentype.tables.subtables.Coverage;
 import opentype.tables.subtables.RangeRecord;
 import opentype.tables.subtables.ClassDefinition;
 import opentype.tables.subtables.Lookup;
+import opentype.tables.subtables.LookupSets;
 import haxe.io.Bytes;
 
 using opentype.BytesHelper;
@@ -153,11 +154,27 @@ class Parser {
 	public function parseOffset16List()
 		return this.parseUShortList();
 
-	public function parseUShortList():Array<Int> {
-		final result = parseUShortListOfLength(parseUShort());
+	public function parseUShortList(count:Int = null):Array<Int> {
+		if (count == null)
+			count = parseUShort();
+
+		final result = parseUShortListOfLength(count);
 		return result;
 	}
 
+	/*
+		if (count === undefined) { count = this.parseUShort(); }
+		const offsets = new Array(count);
+		const dataView = this.data;
+		let offset = this.offset + this.relativeOffset;
+		for (let i = 0; i < count; i++) {
+			offsets[i] = dataView.getUint16(offset);
+			offset += 2;
+		}
+
+		this.relativeOffset += count * 2;
+		return offsets;
+	 */
 	public function parseUShortListOfLength(count:Int):Array<Int> {
 		final list = [for (i in 0...count) parseUShort()];
 		return list;
@@ -212,12 +229,28 @@ class Parser {
 		return records;
 	}
 
+	public function parseRecordListOfLength2<T>(count:Int, lookupRecordDesc:LookupRecordDesc):Array<LookupRecord> {
+		// If the count argument is absent, read it in the stream.
+		final records = [];
+		for (i in 0...count) {
+			final sequenceIndex = lookupRecordDesc.sequenceIndex();
+			final lookupListIndex = lookupRecordDesc.lookupListIndex();
+			final lookupRecord:LookupRecord = {sequenceIndex: sequenceIndex, lookupListIndex: lookupListIndex};
+			records.push(lookupRecord);
+		}
+		return records;
+	}
+
 	public static function recordList<T>(recordDescription:Array<RecordDescription<T>>):Parser->Array<Array<Record<T>>> {
 		return p -> p.parseRecordList(recordDescription);
 	}
 
 	public function parseRecordList<T>(recordDescription:Array<RecordDescription<T>>):Array<Array<Record<T>>> {
 		return parseRecordListOfLength(parseUShort(), recordDescription);
+	}
+
+	public function parseRecordList2(substCount:Int, lookupRecordDesc:LookupRecordDesc) {
+		return parseRecordListOfLength2(substCount, lookupRecordDesc);
 	}
 
 	/**

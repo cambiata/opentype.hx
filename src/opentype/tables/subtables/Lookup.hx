@@ -1,5 +1,6 @@
 package opentype.tables.subtables;
 
+import opentype.tables.subtables.LookupSets;
 import opentype.tables.ValueRecord;
 
 class Lookup implements ILookup {
@@ -22,6 +23,15 @@ class Lookup implements ILookup {
 	public var substitute:Array<Int>;
 	public var deltaGlyphId:Int;
 	public var sequences:Array<Array<Int>>;
+	public var alternateSets:Array<Array<Int>>;
+	public var ligatureSets:Array<Array<LigatureSet>>;
+	public var ruleSets:Array<Array<RuleSet>>;
+	public var classSets:Array<Array<ClassSet>>;
+	public var lookupRecords:Array<LookupRecord>;
+	public var coverages:Array<Coverage>;
+	public var backtrackCoverage:Array<Array<Coverage>>;
+	public var lookaheadCoverage:Array<Array<Coverage>>;
+	public var substitutes:Array<Int>;
 }
 
 class PairSet {
