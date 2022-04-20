@@ -1,5 +1,6 @@
 package opentype;
 
+import opentype.tables.Gsub;
 import opentype.tables.FeatureTable;
 import opentype.tables.FeatureTable.Feature;
 import opentype.tables.LangSys;
@@ -16,6 +17,8 @@ import opentype.tables.subtables.LookupSets;
 import haxe.io.Bytes;
 
 using opentype.BytesHelper;
+using Lambda;
+using Std;
 
 typedef Uint8 = Int;
 typedef Int8 = Int;
@@ -32,6 +35,9 @@ class Parser {
 	public static final typeOffsetFixed = 4;
 	public static final typeOffsetLongDateTime = 8;
 	public static final typeOffsetTag = 4;
+
+	function toString()
+		return 'Parser:{${this.data.length}}';
 
 	public function new(data:Bytes, offset = 0) {
 		this.data = data;
@@ -198,6 +204,7 @@ class Parser {
 	};
 
 	public function parseListOfLength<T>(count:Int, parseFn:Void->T):Array<T> {
+		// trace('parseList ' + count + ' ' + parseFn);
 		final list = [for (i in 0...count) parseFn()];
 		return list;
 	};
@@ -250,6 +257,8 @@ class Parser {
 	}
 
 	public function parseRecordList2(substCount:Int, lookupRecordDesc:LookupRecordDesc) {
+		if (substCount == null)
+			substCount = parseShort();
 		return parseRecordListOfLength2(substCount, lookupRecordDesc);
 	}
 
@@ -324,10 +333,12 @@ class Parser {
 
 	public function parsePointer():Parser {
 		final pointerOffset = parseUShort();
+		var ret = null;
 		if (pointerOffset > 0) {
-			return new Parser(data, offset + pointerOffset);
+			ret = new Parser(data, offset + pointerOffset);
 		}
-		return null;
+
+		return ret;
 	};
 
 	/**
@@ -403,23 +414,26 @@ class Parser {
 		final startOffset = offset + relativeOffset;
 		final format = parseUShort();
 		final count = parseUShort();
-		if (format == 1) {
-			return {
-				format: 1,
-				glyphs: parseUShortListOfLength(count),
-				ranges: []
-			};
-		} else if (format == 2) {
-			return {
-				format: 2,
-				ranges: [
-					for (i in 0...count)
-						{start: parseUShort(), end: parseUShort(), value: parseUShort()}
-				],
-				glyphs: []
-			};
+		switch format {
+			case 1:
+				return {
+					format: 1,
+					glyphs: parseUShortListOfLength(count),
+					ranges: []
+				};
+			case 2:
+				return {
+					format: 2,
+					ranges: [
+						for (i in 0...count)
+							{start: parseUShort(), end: parseUShort(), value: parseUShort()}
+					],
+					glyphs: []
+				};
+			default:
+				throw('Coverage format must be 1 or 2.');
 		}
-		throw('${StringTools.hex(startOffset)}: Coverage format must be 1 or 2.');
+		return null;
 	};
 
 	// Parse a Class Definition Table in a GSUB, GPOS or GDEF table.
@@ -481,22 +495,54 @@ class Parser {
 
 	public function parseAtPointer<T>(parseFn:Parser->T):T {
 		var p:Parser = parsePointer();
-		return (p != null) ? parseFn(p) : null;
+
+		if (p == null)
+			return null;
+
+		final ret = parseFn(p);
+
+		return ret;
 	};
 
-	public function parseLookupList<T>(lookupTableParsers:Array<Parser->Any>):Array<LookupTable> {
-		var p = parsePointer();
+	public function parseLookupList<T>(lookupTableParsers:Array<Parser->Lookup>):Array<LookupTable> {
+		var p:Parser = parsePointer();
 		if (p == null)
 			return [];
 		return p.parseList(() -> {
 			p.parseAtPointer((p) -> {
 				final lookupType = p.parseUShort();
+
 				Check.assert(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ' + lookupType + ' unknown.');
 				final lookupFlag = p.parseUShort();
 				final useMarkFilteringSet = lookupFlag & 0x10;
-				final subTables:Array<Any> = p.parseList(() -> p.parseAtPointer(lookupTableParsers[lookupType]));
+
+				// final lookupParser:Parser->Lookup = lookupTableParsers[lookupType];
+				final lookupParser:Parser->Lookup = cast Gsub.subtableParsers[lookupType];
+				final subTables:Array<Lookup> = p.parseList(() -> p.parseAtPointer(lookupParser));
 				final markFilteringSet:Int = useMarkFilteringSet > 0 ? p.parseUShort() : useMarkFilteringSet;
-				final lookupTable = new LookupTable(lookupType, lookupFlag, subTables, useMarkFilteringSet);
+				final lookupTable:LookupTable = new LookupTable(lookupType, lookupFlag, subTables, useMarkFilteringSet);
+				return lookupTable;
+			});
+		});
+	};
+
+	public function parseLookupListAny<T>(lookupTableParsers:Array<Parser->Any>):Array<LookupTable> {
+		var p:Parser = parsePointer();
+		if (p == null)
+			return [];
+		return p.parseList(() -> {
+			p.parseAtPointer((p) -> {
+				final lookupType = p.parseUShort();
+
+				Check.assert(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ' + lookupType + ' unknown.');
+				final lookupFlag = p.parseUShort();
+				final useMarkFilteringSet = lookupFlag & 0x10;
+
+				// final lookupParser:Parser->Lookup = lookupTableParsers[lookupType];
+				final lookupParser:Parser->Lookup = cast Gsub.subtableParsers[lookupType];
+				final subTables:Array<Lookup> = p.parseList(() -> p.parseAtPointer(lookupParser));
+				final markFilteringSet:Int = useMarkFilteringSet > 0 ? p.parseUShort() : useMarkFilteringSet;
+				final lookupTable:LookupTable = new LookupTable(lookupType, lookupFlag, subTables, useMarkFilteringSet);
 				return lookupTable;
 			});
 		});
@@ -566,3 +612,5 @@ class RecordDescription<T> {
 	public var name:String;
 	public var parseFn:Parser->T;
 }
+
+typedef ParserLookupFn = Parser->Lookup;

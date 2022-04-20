@@ -1,12 +1,15 @@
+import opentype.OpenType;
+import opentype.Font;
 import buddy.*;
 
 using buddy.Should;
+using opentype.OpenType;
 
 @colorize
 class Main implements Buddy<[
 	//
 	// TestParser,
-	// tables.GposTable,
+	tables.GposTable,
 	// tables.LocaTable,
 	// tables.LtagTable,
 	// tables.NameTable,
@@ -20,5 +23,12 @@ class Main implements Buddy<[
 	// TestFont,
 	// TestTokenizer,
 	// TestBidi,
-	tables.GsubTable,
+	// tables.GsubTable,
+	// TestFeatureQuery,
+	// TestFontTables,
+	// utils.TestDataBuilder,
 ]> {}
+// function main() {
+// 	trace('Hello');
+// 	final latinFont:Font = OpenType.loadFromFileSync('src/test/fonts/Roboto-Black.ttf').parse();
+// }

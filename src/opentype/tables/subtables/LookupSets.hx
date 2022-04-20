@@ -26,3 +26,19 @@ typedef ClassSet = {
 	classes:Array<Int>,
 	lookupRecords:Array<LookupRecord>,
 }
+
+typedef ChainRuleSet = {
+	backtrack:Array<Int>,
+	input:Array<Int>,
+	lookahead:Array<Int>,
+	lookupRecords:Array<LookupRecord>,
+}
+
+typedef ChainClassSet = ChainRuleSet;
+
+typedef ExtensionSet = {
+	substFormat:Int,
+	backtrackCoverage:Array<Coverage>,
+	inputCoverage:Array<Coverage>,
+	// backtrackCoverage:Array<Coverage>,
+}

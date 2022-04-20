@@ -6,12 +6,12 @@ import opentype.tables.subtables.Lookup.PairSet;
 import haxe.io.Bytes;
 
 class Gpos implements IScriptTable implements ILayoutTable {
-	static function error(p):Any {
+	static function error(p):Lookup {
 		return null;
 	}
 
-	static var subtableParsers:Array<Parser->Any> = [
-		null, cast parseLookup1, cast parseLookup2, error, error, error, error, error, error, error
+	static var subtableParsers:Array<Parser->Lookup> = [
+		null, parseLookup1, parseLookup2, error, error, error, error, error, error, error
 	];
 
 	public function new() {
@@ -32,9 +32,12 @@ class Gpos implements IScriptTable implements ILayoutTable {
 	// https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-1-single-adjustment-positioning-subtable
 	// this = Parser instance
 	public static function parseLookup1(p:Parser):Lookup {
+		trace('Gpos.parseLookup1');
 		final start = p.offset + p.relativeOffset;
 		final res = new Lookup();
 		res.posFormat = p.parseUShort();
+		trace(res.posFormat);
+
 		Check.assert(res.posFormat == 1 || res.posFormat == 2, '${StringTools.hex(start)} : GPOS lookup type 1 format must be 1 or 2.');
 		res.coverage = p.parsePointer().parseCoverage();
 		if (res.posFormat == 1) {
@@ -47,6 +50,7 @@ class Gpos implements IScriptTable implements ILayoutTable {
 
 	// https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable
 	static function parseLookup2(p:Parser):Lookup {
+		trace('Gpos.parseLookup2');
 		final start = p.offset + p.relativeOffset;
 		final res = new Lookup();
 		res.posFormat = p.parseUShort();
@@ -79,15 +83,19 @@ class Gpos implements IScriptTable implements ILayoutTable {
 
 	// https://docs.microsoft.com/en-us/typography/opentype/spec/gpos
 	static function parseGposTable(data:Bytes, start = 0):Gpos {
+		trace('parseGposTable');
 		final p = new Parser(data, start);
 		final tableVersion = p.parseVersion(1);
+		trace('tableVersion ' + tableVersion);
 		if (tableVersion != 1 && tableVersion != 1.1)
 			throw('Unsupported GPOS table version ' + tableVersion);
+
 		var gpos = new Gpos();
+
 		gpos.version = tableVersion;
 		gpos.scripts = p.parseScriptList();
 		gpos.features = p.parseFeatureList();
-		gpos.lookups = p.parseLookupListAny(subtableParsers);
+		gpos.lookups = p.parseLookupList(subtableParsers);
 		if (tableVersion != 1) {
 			// gpos.variations = p.parseFeatureVariationsList()
 		}

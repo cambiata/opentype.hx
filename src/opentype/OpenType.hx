@@ -16,6 +16,8 @@ import opentype.tables.Ltag;
 import opentype.tables.Name;
 import opentype.tables.Maxp;
 import opentype.tables.Hmtx;
+//
+import opentype.tables.Gsub;
 
 using opentype.BytesHelper;
 
@@ -185,6 +187,7 @@ class OpenType {
 	}
 
 	public static function parse(data:Bytes):Font {
+		trace('parse');
 		var indexToLocFormat:Int = -1;
 		var ltagTable = [];
 
@@ -222,7 +225,7 @@ class OpenType {
 		var glyfTableEntry:TableEntry = null;
 		var gdefTableEntry;
 		var gposTableEntry:TableEntry = null;
-		var gsubTableEntry;
+		var gsubTableEntry:TableEntry = null;
 		var hmtxTableEntry:TableEntry = null;
 		var kernTableEntry:TableEntry = null;
 		var locaTableEntry:TableEntry = null;
@@ -310,17 +313,20 @@ class OpenType {
 					{
 						gposTableEntry = tableEntry;
 					}
-					/*
-						case 'GSUB':
-							gsubTableEntry = tableEntry;
-							break;
-						case 'meta':
-							metaTableEntry = tableEntry;
-							break;
-					 */
+				case 'GSUB':
+					trace('GSUB');
+					gsubTableEntry = tableEntry;
+
+				/*
+					case 'meta':
+						metaTableEntry = tableEntry;
+						break;
+				 */
+				default:
+					// trace('UNHANDLED tableEntry: ' + tableEntry.tag);
 			}
 		}
-
+		trace(111);
 		final nameTable = uncompressTable(data, nameTableEntry);
 		// font.tables.name = Name.parse(nameTable.data, nameTable.offset, ltagTable);
 		font.names = Name.parse(nameTable.data, nameTable.offset, ltagTable).properties;
@@ -340,9 +346,13 @@ class OpenType {
 				throw new Error('Font doesn\'t contain TrueType or CFF outlines.');
 			}
 		 */
+
+		trace(222);
 		final hmtxTable = uncompressTable(data, hmtxTableEntry);
+		trace(333);
 		Hmtx.parse(hmtxTable.data, hmtxTable.offset, font, false);
 		Encoding.addGlyphNames(font, false);
+		trace(444);
 
 		if (kernTableEntry != null) {
 			final kernTable = uncompressTable(data, kernTableEntry);
@@ -350,11 +360,18 @@ class OpenType {
 		} else {
 			font.kerningPairs = [];
 		}
+		trace(555);
 
 		if (gposTableEntry != null) {
 			final gposTable = uncompressTable(data, gposTableEntry);
 			font.tables.gpos = Gpos.parse(gposTable.data, gposTable.offset);
 			font.position.init();
+		}
+		trace(666);
+
+		if (gsubTableEntry != null) {
+			final gsubTable = uncompressTable(data, gsubTableEntry);
+			font.tables.gsub = Gsub.parse(gsubTable.data, gsubTable.offset);
 		}
 
 		return font;

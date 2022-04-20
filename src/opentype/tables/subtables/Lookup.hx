@@ -3,6 +3,9 @@ package opentype.tables.subtables;
 import opentype.tables.subtables.LookupSets;
 import opentype.tables.ValueRecord;
 
+using Lambda;
+using Std;
+
 class Lookup implements ILookup {
 	public function new() {}
 
@@ -29,9 +32,34 @@ class Lookup implements ILookup {
 	public var classSets:Array<Array<ClassSet>>;
 	public var lookupRecords:Array<LookupRecord>;
 	public var coverages:Array<Coverage>;
-	public var backtrackCoverage:Array<Array<Coverage>>;
-	public var lookaheadCoverage:Array<Array<Coverage>>;
+	public var backtrackCoverage:Array<Coverage>;
+	public var lookaheadCoverage:Array<Coverage>;
+	public var inputCoverage:Array<Coverage>;
 	public var substitutes:Array<Int>;
+
+	public var chainRuleSets:Array<Array<ChainRuleSet>>;
+	public var backtrackClassDef:ClassDefinition;
+	public var inputClassDef:ClassDefinition;
+	public var lookaheadClassDef:ClassDefinition;
+	public var chainClassSets:Array<Array<ChainClassSet>>;
+	public var lookupType:Int;
+	public var extension:Lookup;
+
+	public function toString():String {
+		return 'Lookup: {'
+			+ '\n\t\t - substFormat: '
+			+ this.substFormat
+			+ '\n\t\t - backtrackCoverage: ' //
+			+ this.backtrackCoverage.map(i -> i.string())
+			+ '\n\t\t - inputCoverage: '
+			+ this.inputCoverage.map(i -> i.string())
+			+ '\n\t\t - lookaheadCoverage: '
+			+ this.lookaheadCoverage.map(i -> i.string())
+			+ '\n\t\t - lookupRecords: '
+			+ this.lookupRecords
+			+ '\n\t \n'
+			+ '}\n';
+	}
 }
 
 class PairSet {
@@ -39,7 +67,7 @@ class PairSet {
 		this.secondGlyph = secondGlyph;
 		this.value1 = value1;
 		this.value2 = value2;
-		trace(this.secondGlyph + ' ' + this.value1 + ' ' + this.value2);
+		// trace(this.secondGlyph + ' ' + this.value1 + ' ' + this.value2);
 	}
 
 	public var secondGlyph:Int;

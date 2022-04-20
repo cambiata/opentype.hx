@@ -1,5 +1,6 @@
 package opentype.tables;
 
+import opentype.tables.subtables.Coverage;
 import opentype.tables.subtables.Lookup;
 import opentype.tables.subtables.Lookup.PairSet;
 import opentype.tables.subtables.LookupSets;
@@ -7,12 +8,14 @@ import opentype.tables.subtables.LookupSets;
 import opentype.tables.subtables.ClassDefinition;
 import haxe.io.Bytes;
 
+using Lambda;
+
 class Gsub implements IScriptTable implements ILayoutTable {
 	static function error(p):Any {
 		return null;
 	}
 
-	static var subtableParsers:Array<Parser->Any> = [
+	public static var subtableParsers:Array<Parser->Any> = [
 		null, cast parseLookup1, cast parseLookup2, cast parseLookup3, cast parseLookup4, cast parseLookup5, cast parseLookup6, cast parseLookup7,
 		cast parseLookup8, error
 	];
@@ -35,6 +38,7 @@ class Gsub implements IScriptTable implements ILayoutTable {
 	// https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-1-single-adjustment-positioning-subtable
 	// this = Parser instance
 	public static function parseLookup1(p:Parser):Lookup {
+		// trace('GSUB parserLookup 1');
 		final start = p.offset + p.relativeOffset;
 		final substFormat = p.parseUShort();
 		final res = new Lookup();
@@ -53,11 +57,13 @@ class Gsub implements IScriptTable implements ILayoutTable {
 
 	// https://docs.microsoft.com/en-us/typography/opentype/spec/gpos#lookup-type-2-pair-adjustment-positioning-subtable
 	public static function parseLookup2(p:Parser):Lookup {
+		// trace('GSUB parserLookup 2');
 		final substFormat = p.parseUShort();
 		if (substFormat != 1)
 			throw 'GSUB Multiple Substitution Subtable identifier-format must be 1';
 
 		final res:Lookup = new Lookup();
+
 		res.substFormat = substFormat;
 		res.coverage = p.parsePointer().parseCoverage();
 		res.sequences = p.parseListOfLists();
@@ -65,11 +71,13 @@ class Gsub implements IScriptTable implements ILayoutTable {
 	};
 
 	public static function parseLookup3(p:Parser):Lookup {
+		// trace('GSUB parserLookup 3');
 		final substFormat = p.parseUShort();
 		if (substFormat != 1)
 			throw 'GSUB Multiple Substitution Subtable identifier-format must be 1';
 
 		final res:Lookup = new Lookup();
+
 		res.substFormat = substFormat;
 		res.coverage = p.parsePointer().parseCoverage();
 		res.alternateSets = p.parseListOfLists();
@@ -77,11 +85,13 @@ class Gsub implements IScriptTable implements ILayoutTable {
 	}
 
 	public static function parseLookup4(p:Parser):Lookup {
+		// trace('GSUB parserLookup 4');
 		final substFormat = p.parseUShort();
 		if (substFormat != 1)
 			throw 'GSUB Multiple Substitution Subtable identifier-format must be 1';
 
 		final res:Lookup = new Lookup();
+
 		res.substFormat = substFormat;
 		res.coverage = p.parsePointer().parseCoverage();
 		res.ligatureSets = p.parseListOfLists(() -> {
@@ -95,10 +105,12 @@ class Gsub implements IScriptTable implements ILayoutTable {
 	}
 
 	public static function parseLookup5(p:Parser):Lookup {
+		// trace('GSUB parserLookup 5');
 		final start = p.offset + p.relativeOffset;
 		final substFormat = p.parseUShort();
 
 		final res:Lookup = new Lookup();
+
 		res.substFormat = substFormat;
 
 		switch substFormat {
@@ -153,33 +165,111 @@ class Gsub implements IScriptTable implements ILayoutTable {
 	}
 
 	public static function parseLookup6(p:Parser):Lookup {
-		throw 'Gsub parseLookup6 not implemented';
-		return null;
+		// trace('GSUB parserLookup 6');
+		// throw 'Gsub parseLookup6 not implemented';
+		// return null;
+		final start = p.offset + p.relativeOffset;
+		final substFormat = p.parseUShort();
+
+		final res:Lookup = new Lookup();
+
+		res.substFormat = substFormat;
+		switch substFormat {
+			case 1:
+				res.coverage = p.parsePointer().parseCoverage();
+
+				final chainRuleSets:Array<Array<ChainRuleSet>> = p.parseListOfLists(() -> {
+					final lookupRecordDesc:LookupRecordDesc = {sequenceIndex: p.parseUShort, lookupListIndex: p.parseUShort};
+					final chainRuleSet:ChainRuleSet = {
+						backtrack: p.parseUShortList(),
+						input: p.parseUShortListOfLength(p.parseShort() - 1),
+						lookahead: p.parseUShortList(),
+						lookupRecords: p.parseRecordList2(null, lookupRecordDesc),
+					}
+					return chainRuleSet;
+				});
+				res.chainRuleSets = chainRuleSets;
+
+			case 2:
+				res.coverage = p.parsePointer().parseCoverage();
+				res.backtrackClassDef = p.parsePointer().parseClassDef();
+				res.inputClassDef = p.parsePointer().parseClassDef();
+				res.lookaheadClassDef = p.parsePointer().parseClassDef();
+
+				final chainClassSets:Array<Array<ChainClassSet>> = p.parseListOfLists(() -> {
+					final lookupRecordDesc:LookupRecordDesc = {sequenceIndex: p.parseUShort, lookupListIndex: p.parseUShort};
+					final chainClassSet:ChainClassSet = {
+						backtrack: p.parseUShortList(),
+						input: p.parseUShortListOfLength(p.parseShort() - 1),
+						lookahead: p.parseUShortList(),
+						lookupRecords: p.parseRecordList2(null, lookupRecordDesc),
+					}
+					return chainClassSet;
+				});
+				res.chainClassSets = chainClassSets;
+
+			case 3:
+				res.backtrackCoverage = p.parseList(() -> p.parsePointer().parseCoverage());
+				res.inputCoverage = p.parseList(() -> p.parsePointer().parseCoverage());
+				res.lookaheadCoverage = p.parseList(() -> p.parsePointer().parseCoverage());
+				final lookupRecordDesc:LookupRecordDesc = {sequenceIndex: p.parseUShort, lookupListIndex: p.parseUShort};
+				res.lookupRecords = p.parseRecordList2(null, lookupRecordDesc);
+			default:
+				throw ': lookup type 6 format must be 1, 2 or 3.';
+		}
+		return res;
 	}
 
+	@:access(opentype.Parser.data)
 	public static function parseLookup7(p:Parser):Lookup {
-		throw 'Gsub parseLookup7 not implemented';
-		return null;
+		// trace('GSUB parserLookup 7');
+		final substFormat = p.parseUShort();
+		if (substFormat != 1)
+			throw 'GSUB Extension Substitution subtable identifier-format must be 1';
+
+		final res:Lookup = new Lookup();
+
+		final extensionLookupType = p.parseUShort();
+		final extensionParser:Parser = new Parser(p.data, p.offset + p.parseULong());
+		res.substFormat = substFormat;
+		res.lookupType = extensionLookupType;
+		res.extension = subtableParsers[extensionLookupType](extensionParser);
+		return res;
 	}
 
 	public static function parseLookup8(p:Parser):Lookup {
+		trace('GSUB parserLookup 8 ');
 		final substFormat = p.parseUShort();
+
 		if (substFormat != 1)
-			throw 'GSUB Reverse Chaining Contextual Single Substitution Subtable identifier-format must be 1';
+			trace('GSUB Reverse Chaining Contextual Single Substitution Subtable identifier-format must be 1');
 
 		final res:Lookup = new Lookup();
+
 		res.substFormat = substFormat;
 		res.coverage = p.parsePointer().parseCoverage();
-		res.backtrackCoverage = p.parseList(cast p.parsePointer().parseCoverage());
-		res.lookaheadCoverage = p.parseList(cast p.parsePointer().parseCoverage());
-		res.substitutes = p.parseUShortList();
+		res.backtrackCoverage = p.parseList(() -> {
+			final p:Parser = p.parsePointer();
+			if (p == null)
+				return null;
+			final coverage:Coverage = p.parseCoverage();
+			return coverage;
+		});
+		res.lookaheadCoverage = p.parseList(() -> {
+			final p:Parser = p.parsePointer();
+			if (p == null)
+				return null;
+			final coverage:Coverage = p.parseCoverage();
+			return coverage;
+		});
 
+		res.substitutes = p.parseUShortList();
 		return res;
 	};
 
 	/*
 		subtableParsers[5] = function parseLookup5() {
-			const start = this.offset + this.relativeOffset;
+			const start = p.offset + this.relativeOffset;
 			const substFormat = this.parseUShort();
 
 			if (substFormat === 1) {
@@ -232,12 +322,12 @@ class Gsub implements IScriptTable implements ILayoutTable {
 				gsub.version = tableVersion;
 				gsub.scripts = p.parseScriptList();
 				gsub.features = p.parseFeatureList();
-				gsub.lookups = p.parseLookupList(subtableParsers);
+				gsub.lookups = p.parseLookupList(cast subtableParsers);
 			case 1.1:
 				gsub.version = tableVersion;
 				gsub.scripts = p.parseScriptList();
 				gsub.features = p.parseFeatureList();
-				gsub.lookups = p.parseLookupList(subtableParsers);
+				gsub.lookups = p.parseLookupList(cast subtableParsers);
 				gsub.variations = p.parseFeatureVariationsList();
 			default:
 				throw 'Unsupported GSUB table version.';

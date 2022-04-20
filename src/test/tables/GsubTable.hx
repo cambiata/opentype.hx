@@ -69,7 +69,7 @@ class GsubTable extends buddy.BuddySuite {
 			});
 
 			it('can parse lookup1 substFormat 1', {
-				final data = '0001 0006 00C0   0002 0001 004E 0058 0000';
+				final data = '0001 0006 00C0 0002 0001 004E 0058 0000';
 				final lookup:Lookup = parseLookup(1, data);
 				lookup.substFormat.should.be(1);
 				lookup.coverage.format.should.be(2);
@@ -87,6 +87,7 @@ class GsubTable extends buddy.BuddySuite {
 				lookup.coverage.glyphs.should.containExactly([0x3c, 0x40, 0x4b, 0x4f]);
 				lookup.substitute.should.containExactly([0x131, 0x135, 0x13E, 0x143]);
 			});
+
 			it('can parse lookup2', function() {
 				// https://www.microsoft.com/typography/OTSPEC/GSUB.htm#EX4
 				final data = '0001 0008 0001 000E   0001 0001 00F1   0003 001A 001A 001D';
@@ -229,28 +230,18 @@ class GsubTable extends buddy.BuddySuite {
 					+ '01A7 01A8 01A9 01AA 01AB 01AC 01EC'
 					+ '0001 000C 00A6 00B7 00C3 00D2 00E9 00F1 00FC 010C 0119 0129 013A 0140'; // coverage format 1
 
-				// final lookup:Lookup = parseLookup(8, data);
+				final lookup:Lookup = parseLookup(8, data);
 				// trace(lookup);
-				// lookup.substFormat.should.be(1);
-				// lookup.coverage.format.should.be(1);
-				// lookup.coverage.glyphs.should.containExactly([0xa6, 0xb7, 0xc3, 0xd2, 0xe9, 0xf1, 0xfc, 0x10c, 0x119, 0x129, 0x13a, 0x140]);
-
-				// assert.deepEqual(parsed, {
-				// 	substFormat: 1,
-				// 	coverage: {
-				// 		format: 1,
-				// 		glyphs: [0xa6, 0xb7, 0xc3, 0xd2, 0xe9, 0xf1, 0xfc, 0x10c, 0x119, 0x129, 0x13a, 0x140]
-				// 	},
-				// 	backtrackCoverage: [undefined],
-				// 	lookaheadCoverage: [{
-				// 		format: 1,
-				// 		glyphs: [
-				// 			0xa5, 0xa9, 0xaa, 0xe2, 0x167, 0x168, 0x169, 0x16d, 0x16e, 0x170, 0x183, 0x184, 0x185,
-				// 			0x189, 0x18a, 0x18c, 0x19f, 0x1a0, 0x1a1, 0x1a2, 0x1a3, 0x1a4, 0x1a5, 0x1a6, 0x1a7,
-				// 			0x1a8, 0x1a9, 0x1aa, 0x1ab, 0x1ac, 0x1ec
-				// 		]
-				// 	}],
-				// 	substitutes: [0xa7, 0xb9, 0xc5, 0xd4, 0xea, 0xf2, 0xfd, 0x10d, 0x11b, 0x12b, 0x13b, 0x141]
+				lookup.substFormat.should.be(1);
+				lookup.coverage.format.should.be(1);
+				lookup.coverage.glyphs.should.containExactly([0xa6, 0xb7, 0xc3, 0xd2, 0xe9, 0xf1, 0xfc, 0x10c, 0x119, 0x129, 0x13a, 0x140]);
+				lookup.backtrackCoverage.should.containExactly([null]);
+				lookup.lookaheadCoverage[0].format.should.be(1);
+				lookup.lookaheadCoverage[0].glyphs.should.containExactly([
+					0xa5, 0xa9, 0xaa, 0xe2, 0x167, 0x168, 0x169, 0x16d, 0x16e, 0x170, 0x183, 0x184, 0x185, 0x189, 0x18a, 0x18c, 0x19f, 0x1a0, 0x1a1, 0x1a2,
+					0x1a3, 0x1a4, 0x1a5, 0x1a6, 0x1a7, 0x1a8, 0x1a9, 0x1aa, 0x1ab, 0x1ac, 0x1ec
+				]);
+				lookup.substitutes.should.containExactly([0xa7, 0xb9, 0xc5, 0xd4, 0xea, 0xf2, 0xfd, 0x10d, 0x11b, 0x12b, 0x13b, 0x141]);
 			});
 		});
 	}
