@@ -87,7 +87,7 @@ class Gpos implements IScriptTable implements ILayoutTable {
 		gpos.version = tableVersion;
 		gpos.scripts = p.parseScriptList();
 		gpos.features = p.parseFeatureList();
-		gpos.lookups = p.parseLookupListAny(subtableParsers);
+		gpos.lookups = p.parseLookupList(subtableParsers);
 		if (tableVersion != 1) {
 			// gpos.variations = p.parseFeatureVariationsList()
 		}

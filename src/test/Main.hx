@@ -8,8 +8,8 @@ using opentype.OpenType;
 @colorize
 class Main implements Buddy<[
 	//
-	// TestParser,
-	tables.GposTable,
+	TestParser,
+	// tables.GposTable,
 	// tables.LocaTable,
 	// tables.LtagTable,
 	// tables.NameTable,

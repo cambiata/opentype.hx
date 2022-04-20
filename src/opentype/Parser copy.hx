@@ -504,7 +504,29 @@ class Parser {
 		return ret;
 	};
 
-	public function parseLookupList<T>(lookupTableParsers:Array<Parser->Any>):Array<Any> {
+	public function parseLookupList<T>(lookupTableParsers:Array<Parser->Lookup>):Array<LookupTable> {
+		var p:Parser = parsePointer();
+		if (p == null)
+			return [];
+		return p.parseList(() -> {
+			p.parseAtPointer((p) -> {
+				final lookupType = p.parseUShort();
+
+				Check.assert(1 <= lookupType && lookupType <= 9, 'GPOS/GSUB lookup type ' + lookupType + ' unknown.');
+				final lookupFlag = p.parseUShort();
+				final useMarkFilteringSet = lookupFlag & 0x10;
+
+				// final lookupParser:Parser->Lookup = lookupTableParsers[lookupType];
+				final lookupParser:Parser->Lookup = cast Gsub.subtableParsers[lookupType];
+				final subTables:Array<Lookup> = p.parseList(() -> p.parseAtPointer(lookupParser));
+				final markFilteringSet:Int = useMarkFilteringSet > 0 ? p.parseUShort() : useMarkFilteringSet;
+				final lookupTable:LookupTable = new LookupTable(lookupType, lookupFlag, subTables, useMarkFilteringSet);
+				return lookupTable;
+			});
+		});
+	};
+
+	public function parseLookupListAny<T>(lookupTableParsers:Array<Parser->Any>):Array<LookupTable> {
 		var p:Parser = parsePointer();
 		if (p == null)
 			return [];

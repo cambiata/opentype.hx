@@ -300,7 +300,7 @@ class TestParser extends buddy.BuddySuite {
 						+ '9ABC';
 					final lookupTableParsers:Array<Parser->Any> = [null, null, null, null, cast Parser.uShort];
 					final p = new Parser(data.unhex(), 0);
-					var res = p.parseLookupList(lookupTableParsers);
+					var res:Lookup = cast p.parseLookupList(lookupTableParsers);
 					res[0].lookupType.should.be(4);
 					res[0].lookupFlag.should.be(0x000c);
 					res[0].subTables.should.containExactly([0x1234]);
